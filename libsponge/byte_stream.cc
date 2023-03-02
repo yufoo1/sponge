@@ -12,42 +12,70 @@ void DUMMY_CODE(Targs &&... /* unused */) {}
 
 using namespace std;
 
-ByteStream::ByteStream(const size_t capacity) { DUMMY_CODE(capacity); }
+ByteStream::ByteStream(const size_t capacity): 
+    buff(), capa(capacity), wrBytes(0), rdBytes(0), wrEnd(false), rdEnd(false) {}
 
 size_t ByteStream::write(const string &data) {
-    DUMMY_CODE(data);
-    return {};
+    size_t remain = capa - buff.size();
+    size_t min = std::min(remain, data.size());
+    for(size_t i = 0; i < min; ++i) {
+        buff.push_back(data[i]);
+    }
+    wrBytes += min;
+    return min;
 }
 
 //! \param[in] len bytes will be copied from the output side of the buffer
 string ByteStream::peek_output(const size_t len) const {
-    DUMMY_CODE(len);
-    return {};
+	std::string s;
+	for(size_t i = 0; i < std::min(len, buff.size()); ++i) {
+		s += buff[i];
+	}
+	return s;
 }
 
 //! \param[in] len bytes will be removed from the output side of the buffer
-void ByteStream::pop_output(const size_t len) { DUMMY_CODE(len); }
+void ByteStream::pop_output(const size_t len) {
+	if(len > buff.size()) {
+		set_error();
+		return;
+	}
+	for(size_t i = 0; i < len; ++i) {
+		buff.pop_front();
+	}
+	rdBytes += len;
+}
 
 //! Read (i.e., copy and then pop) the next "len" bytes of the stream
 //! \param[in] len bytes will be popped and returned
 //! \returns a string
 std::string ByteStream::read(const size_t len) {
-    DUMMY_CODE(len);
-    return {};
+	std::string s;
+	if(len > buff.size()) {
+		set_error();
+		return s;
+	}
+    for(size_t i = 0; i < len; ++i) {
+		s += buff.front();
+		buff.pop_front();
+    }
+	rdBytes += len;
+	return s;
+
 }
 
-void ByteStream::end_input() {}
+void ByteStream::end_input() { wrEnd = true; }
 
-bool ByteStream::input_ended() const { return {}; }
+bool ByteStream::input_ended() const { return wrEnd; }
 
-size_t ByteStream::buffer_size() const { return {}; }
+size_t ByteStream::buffer_size() const { return buff.size(); }
 
-bool ByteStream::buffer_empty() const { return {}; }
+bool ByteStream::buffer_empty() const { return buff.empty(); }
 
-bool ByteStream::eof() const { return false; }
+bool ByteStream::eof() const { return buff.empty() && wrEnd; }
 
-size_t ByteStream::bytes_written() const { return {}; }
+size_t ByteStream::bytes_written() const { return wrBytes; }
 
-size_t ByteStream::bytes_read() const { return {}; }
+size_t ByteStream::bytes_read() const { return rdBytes; }
 
-size_t ByteStream::remaining_capacity() const { return {}; }
+size_t ByteStream::remaining_capacity() const { return capa - buff.size(); }
